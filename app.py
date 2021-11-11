@@ -1,13 +1,30 @@
 import datetime
+import os
 
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow import Schema, ValidationError, fields, pre_load
 from sqlalchemy.exc import NoResultFound
 
+# user = 'postgres'
+# password = 'postgres'
+# host = 'localhost'
+# database = 'flask_marshmallow'
+# port = '5432'
+user = os.environ.get('POSTGRES_USER')
+password = os.environ.get('POSTGRES_PASSWORD')
+host = os.environ.get('POSTGRES_HOST')
+port = os.environ.get('POSTGRES_PORT')
+database = os.environ.get('POSTGRES_DB')
+
+# DATABASE_CONNECTION_URI = f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}'
+DATABASE_CONNECTION_URI = f'postgresql://{user}:{password}@db:{port}/{database}'
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:////tmp/quotes.db"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_CONNECTION_URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
 
 ##### MODELS #####
 
@@ -70,6 +87,11 @@ quotes_schema = QueteSchema(many=True, only=("id", "content"))
 ##### API #####
 
 
+@app.route('/')
+def hello():
+    return 'Hello, Welcome....'
+
+
 @app.route("/authors")
 def get_authors():
     authors = Author.query.all()
@@ -86,7 +108,6 @@ def get_author(pk):
     except NoResultFound:
         return {"message": "Author could not found"}, 400
     author_result = author_schema.dump(author)
-    print()
     quotes_result = quotes_schema.dump(author.quotes.all())
     return {"author": author_result, 'quotes': quotes_result}
 
@@ -136,4 +157,4 @@ def new_quote():
 
 if __name__ == "__main__":
     db.create_all()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, host='0.0.0.0')
